@@ -1,6 +1,8 @@
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
-import type { User, AuthContextType } from '../types';
+import type { User, AuthContextType, RegisterCredentials, UserBalance } from '../types';
+import authService from '../services/authService';
+import balanceService from '../services/balanceService';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -18,47 +20,107 @@ interface AuthProviderProps {
 
 export const AuthProvider = ({ children }: AuthProviderProps) => {
     const [user, setUser] = useState<User | null>(null);
+    const [balance, setBalance] = useState<UserBalance | null>(null);
     const [isLoading, setIsLoading] = useState(false);
+
+    const loadBalance = async () => {
+        try {
+            const response = await balanceService.getMyBalance();
+            
+            if (response.success && response.data) {
+                setBalance(response.data);
+            }
+        } catch (error) {
+            console.error('Error loading balance:', error);
+        }
+    };
 
     const login = async (username: string, password: string): Promise<boolean> => {
         setIsLoading(true);
 
-        // Simulación de autenticación - En un caso real, aquí harías la llamada a la API
-        await new Promise(resolve => setTimeout(resolve, 1000));
-
-        if (username === 'admin' && password === 'password') {
-            const mockUser: User = {
-                id: '1',
-                username: 'admin',
-                email: 'admin@example.com'
-            };
-            setUser(mockUser);
-            localStorage.setItem('user', JSON.stringify(mockUser));
+        try {
+            const response = await authService.login({ username, password });
+            
+            if (response.success && response.data.status && response.data.jwt) {
+                const userData: User = {
+                    id: '1', // Valor por defecto ya que no viene en la respuesta
+                    username: response.data.username,
+                    email: '' // Valor por defecto ya que no viene en la respuesta
+                };
+                setUser(userData);
+                
+                // Cargar balance después del login exitoso
+                await loadBalance();
+                
+                setIsLoading(false);
+                return true;
+            }
+            
             setIsLoading(false);
-            return true;
+            return false;
+        } catch (error) {
+            console.error('Login failed:', error);
+            setIsLoading(false);
+            return false;
         }
-
-        setIsLoading(false);
-        return false;
     };
 
-    const logout = () => {
-        setUser(null);
-        localStorage.removeItem('user');
+    const logout = async () => {
+        try {
+            const result = await authService.logout();
+            console.log('Logout result:', result.message);
+        } catch (error) {
+            console.error('Logout error:', error);
+        } finally {
+            setUser(null);
+            setBalance(null);
+        }
+    };
+
+    const refreshBalance = async () => {
+        await loadBalance();
+    };
+
+    const register = async (registerData: RegisterCredentials): Promise<{ success: boolean; message?: string }> => {
+        setIsLoading(true);
+        
+        try {
+            const response = await authService.register(registerData);
+            setIsLoading(false);
+            
+            if (response.success) {
+                return { success: true, message: 'Usuario registrado exitosamente' };
+            } else {
+                return { success: false, message: response.error || 'Error al registrar usuario' };
+            }
+        } catch (error: any) {
+            setIsLoading(false);
+            return { success: false, message: error.message || 'Error al registrar usuario' };
+        }
     };
 
     // Recuperar usuario del localStorage al cargar
-    useState(() => {
-        const savedUser = localStorage.getItem('user');
-        if (savedUser) {
-            setUser(JSON.parse(savedUser));
+    useEffect(() => {
+        const userData = authService.getUserData();
+        if (userData && authService.isAuthenticated()) {
+            const user: User = {
+                id: userData.id,
+                username: userData.username,
+                email: userData.email || ''
+            };
+            setUser(user);
+            // Cargar balance si el usuario está autenticado
+            loadBalance();
         }
-    });
+    }, []);
 
     const value: AuthContextType = {
         user,
+        balance,
         login,
         logout,
+        register,
+        refreshBalance,
         isLoading
     };
 

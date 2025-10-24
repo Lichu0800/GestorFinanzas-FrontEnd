@@ -1,11 +1,17 @@
 import { useState, useEffect } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 import Header from '../components/Header';
 import BalanceCard from '../components/BalanceCard';
+import CurrencyBalanceCard from '../components/CurrencyBalanceCard';
 import FinancialCharts from '../components/FinancialCharts';
-import SideMenu from '../components/SideMenu';
+import NavigationMenu from '../components/NavigationMenu';
+import AddButtonMenu from '../components/AddButtonMenu';
+import AnalyticsSection from '../components/sections/AnalyticsSection';
+import TransactionsSection from '../components/sections/TransactionsSection';
 import type { Balance, Transaction } from '../types';
 
 const Dashboard = () => {
+    const { balance: userBalance, refreshBalance } = useAuth();
     const [balance, setBalance] = useState<Balance>({
         total: 0,
         income: 0,
@@ -13,7 +19,18 @@ const Dashboard = () => {
         transactions: []
     });
     const [isLoading, setIsLoading] = useState(true);
-    const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [isNavigationOpen, setIsNavigationOpen] = useState(false);
+    const [activeSection, setActiveSection] = useState('dashboard');
+    const [isRefreshing, setIsRefreshing] = useState(false);
+
+    const handleRefreshBalance = async () => {
+        setIsRefreshing(true);
+        try {
+            await refreshBalance();
+        } finally {
+            setIsRefreshing(false);
+        }
+    };
 
     useEffect(() => {
         // Simular carga de datos - En el futuro esto será una llamada a la API de Spring Boot
@@ -99,7 +116,7 @@ const Dashboard = () => {
     if (isLoading) {
         return (
             <div className="min-h-screen bg-gray-50">
-                <Header onMenuToggle={() => setIsMenuOpen(!isMenuOpen)} />
+                <Header onMenuToggle={() => setIsNavigationOpen(!isNavigationOpen)} />
                 <div className="flex items-center justify-center h-96">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
                 </div>
@@ -107,89 +124,161 @@ const Dashboard = () => {
         );
     }
 
+    // Función para renderizar contenido según la sección activa
+    const renderSectionContent = () => {
+        switch (activeSection) {
+            case 'analytics':
+                return <AnalyticsSection />;
+            case 'transactions':
+                return <TransactionsSection />;
+            case 'categories':
+                return (
+                    <div className="text-center py-20">
+                        <p className="text-gray-500 text-lg">Sección de Categorías - Próximamente</p>
+                    </div>
+                );
+            case 'goals':
+                return (
+                    <div className="text-center py-20">
+                        <p className="text-gray-500 text-lg">Metas Financieras - Próximamente</p>
+                    </div>
+                );
+            case 'investments':
+                return (
+                    <div className="text-center py-20">
+                        <p className="text-gray-500 text-lg">Inversiones - Próximamente</p>
+                    </div>
+                );
+            case 'calendar':
+                return (
+                    <div className="text-center py-20">
+                        <p className="text-gray-500 text-lg">Calendario Financiero - Próximamente</p>
+                    </div>
+                );
+            case 'profile':
+                return (
+                    <div className="text-center py-20">
+                        <p className="text-gray-500 text-lg">Perfil y Cuentas - Próximamente</p>
+                    </div>
+                );
+            case 'settings':
+                return (
+                    <div className="text-center py-20">
+                        <p className="text-gray-500 text-lg">Configuración - Próximamente</p>
+                    </div>
+                );
+            default: // dashboard
+                return (
+                    <div className="space-y-8">
+                        {/* Título */}
+                        <div className="mb-8">
+                            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                                Dashboard Financiero
+                            </h2>
+                            <p className="text-gray-600">
+                                Resumen de tu situación financiera actual
+                            </p>
+                        </div>
+
+                        {/* Tarjetas de Balance */}
+                        <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
+                            <BalanceCard
+                                title="Balance Total"
+                                amount={balance.total}
+                                type="total"
+                                change={8.5}
+                                showCurrencySwitch={true}
+                            />
+                            <BalanceCard
+                                title="Ingresos"
+                                amount={balance.income}
+                                type="income"
+                                change={12.3}
+                            />
+                            <BalanceCard
+                                title="Gastos"
+                                amount={balance.expenses}
+                                type="expense"
+                                change={-5.2}
+                            />
+                            <CurrencyBalanceCard
+                                currency="ARS"
+                                amount={userBalance?.ars || 0}
+                                onRefresh={handleRefreshBalance}
+                                isRefreshing={isRefreshing}
+                            />
+                            <CurrencyBalanceCard
+                                currency="USD"
+                                amount={userBalance?.dolares || 0}
+                                onRefresh={handleRefreshBalance}
+                                isRefreshing={isRefreshing}
+                            />
+                        </div>
+
+                        {/* Gráficos */}
+                        <FinancialCharts transactions={balance.transactions} />
+
+                        {/* Transacciones Recientes */}
+                        <div className="mt-8 bg-white rounded-xl shadow-sm border border-gray-200">
+                            <div className="p-6 border-b border-gray-200">
+                                <h3 className="text-lg font-semibold text-gray-900">
+                                    Transacciones Recientes
+                                </h3>
+                            </div>
+                            <div className="p-6">
+                                <div className="space-y-4">
+                                    {balance.transactions.slice(0, 5).map(transaction => (
+                                        <div key={transaction.id} className="flex items-center justify-between py-3 border-b border-gray-100 last:border-b-0">
+                                            <div>
+                                                <p className="font-medium text-gray-900">
+                                                    {transaction.description}
+                                                </p>
+                                                <p className="text-sm text-gray-500">
+                                                    {new Date(transaction.date).toLocaleDateString('es-AR')} • {transaction.category}
+                                                </p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className={`font-semibold ${transaction.type === 'income'
+                                                    ? 'text-green-600'
+                                                    : 'text-red-600'
+                                                    }`}>
+                                                    {transaction.type === 'income' ? '+' : '-'}
+                                                    {new Intl.NumberFormat('es-AR', {
+                                                        style: 'currency',
+                                                        currency: 'ARS'
+                                                    }).format(transaction.amount)}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+        }
+    };
+
     return (
-        <div className="min-h-screen bg-gray-50">
-            <Header onMenuToggle={() => setIsMenuOpen(!isMenuOpen)} />
-            <SideMenu
-                isOpen={isMenuOpen}
-                onClose={() => setIsMenuOpen(false)}
+        <div className="min-h-screen bg-gray-50 relative">
+            <Header onMenuToggle={() => setIsNavigationOpen(!isNavigationOpen)} />
+            
+            {/* Menú de Navegación (reemplaza al SideMenu original) */}
+            <NavigationMenu
+                isOpen={isNavigationOpen}
+                onClose={() => setIsNavigationOpen(false)}
+                activeSection={activeSection}
+                onSectionChange={setActiveSection}
             />
 
             <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
                 <div className="px-4 py-6 sm:px-0">
-                    {/* Título */}
-                    <div className="mb-8">
-                        <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                            Dashboard Financiero
-                        </h2>
-                        <p className="text-gray-600">
-                            Resumen de tu situación financiera actual
-                        </p>
-                    </div>
-
-                    {/* Tarjetas de Balance */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                        <BalanceCard
-                            title="Balance Total"
-                            amount={balance.total}
-                            type="total"
-                            change={8.5}
-                        />
-                        <BalanceCard
-                            title="Ingresos"
-                            amount={balance.income}
-                            type="income"
-                            change={12.3}
-                        />
-                        <BalanceCard
-                            title="Gastos"
-                            amount={balance.expenses}
-                            type="expense"
-                            change={-5.2}
-                        />
-                    </div>
-
-                    {/* Gráficos */}
-                    <FinancialCharts transactions={balance.transactions} />
-
-                    {/* Transacciones Recientes */}
-                    <div className="mt-8 bg-white rounded-xl shadow-sm border border-gray-200">
-                        <div className="p-6 border-b border-gray-200">
-                            <h3 className="text-lg font-semibold text-gray-900">
-                                Transacciones Recientes
-                            </h3>
-                        </div>
-                        <div className="p-6">
-                            <div className="space-y-4">
-                                {balance.transactions.slice(0, 5).map(transaction => (
-                                    <div key={transaction.id} className="flex items-center justify-between py-3 border-b border-gray-100 last:border-b-0">
-                                        <div>
-                                            <p className="font-medium text-gray-900">
-                                                {transaction.description}
-                                            </p>
-                                            <p className="text-sm text-gray-500">
-                                                {new Date(transaction.date).toLocaleDateString('es-AR')} • {transaction.category}
-                                            </p>
-                                        </div>
-                                        <div className="text-right">
-                                            <p className={`font-semibold ${transaction.type === 'income'
-                                                ? 'text-green-600'
-                                                : 'text-red-600'
-                                                }`}>
-                                                {transaction.type === 'income' ? '+' : '-'}
-                                                {new Intl.NumberFormat('es-AR', {
-                                                    style: 'currency',
-                                                    currency: 'ARS'
-                                                }).format(transaction.amount)}
-                                            </p>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
+                    {renderSectionContent()}
                 </div>
             </main>
+
+            {/* Botón flotante para acciones rápidas */}
+            <AddButtonMenu />
         </div>
     );
 };

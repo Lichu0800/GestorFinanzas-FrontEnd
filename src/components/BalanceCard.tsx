@@ -1,14 +1,26 @@
 import { TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
+import { useState } from 'react';
 
 interface BalanceCardProps {
     title: string;
     amount: number;
     type: 'total' | 'income' | 'expense';
     change?: number;
+    showCurrencySwitch?: boolean;
 }
 
-const BalanceCard = ({ title, amount, type, change }: BalanceCardProps) => {
-    const formatCurrency = (value: number) => {
+const BalanceCard = ({ title, amount, type, change, showCurrencySwitch = false }: BalanceCardProps) => {
+    const [showInUSD, setShowInUSD] = useState(false);
+    const DOLLAR_RATE = 1000; // Precio del dólar (puedes cambiarlo)
+
+    const formatCurrency = (value: number, inUSD: boolean = false) => {
+        if (inUSD) {
+            const usdValue = value / DOLLAR_RATE;
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD'
+            }).format(usdValue);
+        }
         return new Intl.NumberFormat('es-AR', {
             style: 'currency',
             currency: 'ARS'
@@ -40,14 +52,45 @@ const BalanceCard = ({ title, amount, type, change }: BalanceCardProps) => {
     return (
         <div className={`bg-white p-6 rounded-xl shadow-sm border-2 ${getColorClasses().split(' ').slice(-1)[0]} hover:shadow-md transition-shadow`}>
             <div className="flex items-center justify-between">
-                <div>
-                    <p className="text-sm font-medium text-gray-600 mb-1">{title}</p>
+                <div className="flex-1">
+                    <div className="flex items-center justify-between mb-1">
+                        <p className="text-sm font-medium text-gray-600">{title}</p>
+                        {showCurrencySwitch && type === 'total' && (
+                            <div className="flex items-center space-x-2 bg-gray-100 rounded-full p-1">
+                                <button
+                                    onClick={() => setShowInUSD(false)}
+                                    className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                                        !showInUSD 
+                                            ? 'bg-indigo-600 text-white' 
+                                            : 'text-gray-600 hover:text-gray-900'
+                                    }`}
+                                >
+                                    ARS
+                                </button>
+                                <button
+                                    onClick={() => setShowInUSD(true)}
+                                    className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                                        showInUSD 
+                                            ? 'bg-green-600 text-white' 
+                                            : 'text-gray-600 hover:text-gray-900'
+                                    }`}
+                                >
+                                    USD
+                                </button>
+                            </div>
+                        )}
+                    </div>
                     <p className={`text-2xl font-bold ${getColorClasses().split(' ')[0]}`}>
-                        {formatCurrency(amount)}
+                        {formatCurrency(amount, showInUSD && type === 'total')}
                     </p>
                     {change && (
                         <p className="text-sm text-gray-500 mt-1">
                             {change > 0 ? '+' : ''}{change.toFixed(1)}% este mes
+                        </p>
+                    )}
+                    {showInUSD && type === 'total' && (
+                        <p className="text-xs text-gray-400 mt-1">
+                            Cotización: ${DOLLAR_RATE.toLocaleString('es-AR')}
                         </p>
                     )}
                 </div>

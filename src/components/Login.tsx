@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Navigate } from 'react-router-dom';
+import { Navigate, Link } from 'react-router-dom';
 import { LogIn, User, Lock } from 'lucide-react';
 
 const Login = () => {
@@ -22,9 +22,13 @@ const Login = () => {
             return;
         }
 
-        const success = await login(username, password);
-        if (!success) {
-            setError('Credenciales incorrectas');
+        try {
+            const success = await login(username, password);
+            if (!success) {
+                setError('Credenciales incorrectas. Verifica tu usuario y contraseña.');
+            }
+        } catch (error: any) {
+            setError(error.message || 'Error de conexión. Verifica que el servidor esté disponible.');
         }
     };
 
@@ -96,7 +100,19 @@ const Login = () => {
                         {isLoading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
                     </button>
 
-                    <div className="text-center text-sm text-gray-500">
+                    <div className="mt-6 text-center">
+                        <p className="text-sm text-gray-600">
+                            ¿No tienes una cuenta?{' '}
+                            <Link
+                                to="/register"
+                                className="font-medium text-indigo-600 hover:text-indigo-500 transition-colors duration-200"
+                            >
+                                Regístrate aquí
+                            </Link>
+                        </p>
+                    </div>
+
+                    <div className="text-center text-sm text-gray-500 mt-4">
                         <p>Usuario de prueba: <strong>admin</strong></p>
                         <p>Contraseña: <strong>password</strong></p>
                     </div>
