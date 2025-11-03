@@ -56,16 +56,28 @@ const FinancialCharts = ({ transactions }: FinancialChartsProps) => {
                 {
                     label: 'Ingresos',
                     data: incomeData,
-                    borderColor: 'rgb(34, 197, 94)',
-                    backgroundColor: 'rgba(34, 197, 94, 0.1)',
-                    tension: 0.1,
+                    borderColor: 'rgb(16, 185, 129)',
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    tension: 0.4,
+                    borderWidth: 3,
+                    pointBackgroundColor: 'rgb(16, 185, 129)',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointRadius: 5,
+                    pointHoverRadius: 7,
                 },
                 {
                     label: 'Gastos',
                     data: expenseData,
-                    borderColor: 'rgb(239, 68, 68)',
-                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                    tension: 0.1,
+                    borderColor: 'rgb(244, 63, 94)',
+                    backgroundColor: 'rgba(244, 63, 94, 0.1)',
+                    tension: 0.4,
+                    borderWidth: 3,
+                    pointBackgroundColor: 'rgb(244, 63, 94)',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointRadius: 5,
+                    pointHoverRadius: 7,
                 },
             ],
         };
@@ -83,12 +95,14 @@ const FinancialCharts = ({ transactions }: FinancialChartsProps) => {
         const data = Object.values(expensesByCategory);
 
         const colors = [
-            'rgb(99, 102, 241)',
-            'rgb(239, 68, 68)',
-            'rgb(245, 158, 11)',
-            'rgb(34, 197, 94)',
+            'rgb(139, 92, 246)',
+            'rgb(244, 63, 94)',
+            'rgb(251, 146, 60)',
+            'rgb(16, 185, 129)',
             'rgb(168, 85, 247)',
             'rgb(236, 72, 153)',
+            'rgb(59, 130, 246)',
+            'rgb(34, 197, 94)',
         ];
 
         return {
@@ -97,8 +111,10 @@ const FinancialCharts = ({ transactions }: FinancialChartsProps) => {
                 {
                     data,
                     backgroundColor: colors.slice(0, labels.length),
-                    borderWidth: 2,
+                    borderWidth: 3,
                     borderColor: '#fff',
+                    hoverBorderWidth: 4,
+                    hoverBorderColor: '#fff',
                 },
             ],
         };
@@ -106,18 +122,38 @@ const FinancialCharts = ({ transactions }: FinancialChartsProps) => {
 
     const lineOptions = {
         responsive: true,
+        maintainAspectRatio: true,
         plugins: {
             legend: {
                 position: 'top' as const,
+                labels: {
+                    font: {
+                        size: 13,
+                        weight: 'bold' as const,
+                    },
+                    padding: 15,
+                    usePointStyle: true,
+                    pointStyle: 'circle',
+                },
             },
             title: {
                 display: true,
-                text: 'Ingresos vs Gastos por Mes',
+                text: '📈 Ingresos vs Gastos por Mes',
+                font: {
+                    size: 16,
+                    weight: 'bold' as const,
+                },
+                padding: {
+                    bottom: 20,
+                },
             },
         },
         scales: {
             y: {
                 beginAtZero: true,
+                grid: {
+                    color: 'rgba(0, 0, 0, 0.05)',
+                },
                 ticks: {
                     callback: function (value: any) {
                         return new Intl.NumberFormat('es-AR', {
@@ -128,29 +164,51 @@ const FinancialCharts = ({ transactions }: FinancialChartsProps) => {
                     },
                 },
             },
+            x: {
+                grid: {
+                    display: false,
+                },
+            },
         },
     };
 
     const doughnutOptions = {
         responsive: true,
+        maintainAspectRatio: true,
         plugins: {
             legend: {
                 position: 'right' as const,
+                labels: {
+                    font: {
+                        size: 12,
+                        weight: 'bold' as const,
+                    },
+                    padding: 12,
+                    usePointStyle: true,
+                    pointStyle: 'circle',
+                },
             },
             title: {
                 display: true,
-                text: 'Gastos por Categoría',
+                text: '🍩 Gastos por Categoría',
+                font: {
+                    size: 16,
+                    weight: 'bold' as const,
+                },
+                padding: {
+                    bottom: 20,
+                },
             },
         },
     };
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+            <div className="bg-gradient-to-br from-white to-gray-50 p-6 rounded-2xl shadow-sm border border-gray-200">
                 <Line options={lineOptions} data={getMonthlyData()} />
             </div>
 
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+            <div className="bg-gradient-to-br from-white to-gray-50 p-6 rounded-2xl shadow-sm border border-gray-200">
                 <Doughnut options={doughnutOptions} data={getCategoryData()} />
             </div>
         </div>

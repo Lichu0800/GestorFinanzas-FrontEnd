@@ -173,6 +173,11 @@ class AuthService {
     localStorage.removeItem(ENV_CONFIG.STORAGE_KEYS.AUTH_TOKEN);
     localStorage.removeItem(ENV_CONFIG.STORAGE_KEYS.USER_DATA);
   }
+
+  // Limpiar autenticación (método público)
+  clearAuth(): void {
+    this.clearLocalStorage();
+  }
 }
 
 // Instancia singleton del servicio de autenticación

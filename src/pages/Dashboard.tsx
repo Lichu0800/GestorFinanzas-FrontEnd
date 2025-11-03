@@ -169,19 +169,31 @@ const Dashboard = () => {
                 );
             default: // dashboard
                 return (
-                    <div className="space-y-8">
+                    <div className="space-y-6">
                         {/* Título */}
-                        <div className="mb-8">
-                            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                        <div className="mb-6">
+                            <h2 className="text-3xl font-bold bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent mb-2">
                                 Dashboard Financiero
                             </h2>
-                            <p className="text-gray-600">
+                            <p className="text-gray-600 text-sm">
                                 Resumen de tu situación financiera actual
                             </p>
                         </div>
 
                         {/* Tarjetas de Balance */}
-                        <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
+                        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-6">
+                            {/* Mensaje de error si no se pudo cargar el balance */}
+                            {!userBalance && (
+                                <div className="col-span-full bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-2 flex items-center gap-2">
+                                    <svg className="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                    </svg>
+                                    <span className="text-sm text-yellow-800">
+                                        No se pudo cargar el balance del servidor. Mostrando datos simulados.
+                                    </span>
+                                </div>
+                            )}
+                            
                             <BalanceCard
                                 title="Balance Total"
                                 amount={balance.total}
@@ -216,31 +228,33 @@ const Dashboard = () => {
                         </div>
 
                         {/* Gráficos */}
-                        <FinancialCharts transactions={balance.transactions} />
+                        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+                            <FinancialCharts transactions={balance.transactions} />
+                        </div>
 
                         {/* Transacciones Recientes */}
-                        <div className="mt-8 bg-white rounded-xl shadow-sm border border-gray-200">
-                            <div className="p-6 border-b border-gray-200">
-                                <h3 className="text-lg font-semibold text-gray-900">
-                                    Transacciones Recientes
+                        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+                            <div className="bg-gradient-to-r from-violet-50 to-purple-50 px-6 py-4 border-b border-gray-200">
+                                <h3 className="text-xl font-bold text-gray-900">
+                                    📋 Transacciones Recientes
                                 </h3>
                             </div>
                             <div className="p-6">
-                                <div className="space-y-4">
+                                <div className="space-y-3">
                                     {balance.transactions.slice(0, 5).map(transaction => (
-                                        <div key={transaction.id} className="flex items-center justify-between py-3 border-b border-gray-100 last:border-b-0">
+                                        <div key={transaction.id} className="flex items-center justify-between p-4 rounded-xl hover:bg-gray-50 transition-colors border border-gray-100">
                                             <div>
-                                                <p className="font-medium text-gray-900">
+                                                <p className="font-semibold text-gray-900">
                                                     {transaction.description}
                                                 </p>
-                                                <p className="text-sm text-gray-500">
-                                                    {new Date(transaction.date).toLocaleDateString('es-AR')} • {transaction.category}
+                                                <p className="text-sm text-gray-500 mt-1">
+                                                    📅 {new Date(transaction.date).toLocaleDateString('es-AR')} • 🏷️ {transaction.category}
                                                 </p>
                                             </div>
                                             <div className="text-right">
-                                                <p className={`font-semibold ${transaction.type === 'income'
-                                                    ? 'text-green-600'
-                                                    : 'text-red-600'
+                                                <p className={`font-bold text-lg ${transaction.type === 'income'
+                                                    ? 'text-emerald-600'
+                                                    : 'text-rose-600'
                                                     }`}>
                                                     {transaction.type === 'income' ? '+' : '-'}
                                                     {new Intl.NumberFormat('es-AR', {
@@ -260,7 +274,7 @@ const Dashboard = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 relative">
+        <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-purple-50/30 relative">
             <Header onMenuToggle={() => setIsNavigationOpen(!isNavigationOpen)} />
             
             {/* Menú de Navegación (reemplaza al SideMenu original) */}
@@ -271,8 +285,8 @@ const Dashboard = () => {
                 onSectionChange={setActiveSection}
             />
 
-            <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-                <div className="px-4 py-6 sm:px-0">
+            <main className="max-w-[1920px] mx-auto py-4 px-4 sm:px-6 lg:px-8">
+                <div className="py-4">
                     {renderSectionContent()}
                 </div>
             </main>

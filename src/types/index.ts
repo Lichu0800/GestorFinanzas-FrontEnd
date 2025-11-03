@@ -67,4 +67,6 @@ export interface AuthContextType {
     register: (registerData: RegisterCredentials) => Promise<{ success: boolean; message?: string }>;
     refreshBalance: () => Promise<void>;
     isLoading: boolean;
+    backendUnavailable: boolean;
+    retryConnection: () => Promise<void>;
 }

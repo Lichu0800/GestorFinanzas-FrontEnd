@@ -33,13 +33,24 @@ class BalanceService {
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
-                }
+                },
+                signal: AbortSignal.timeout(5000) // Timeout de 5 segundos
             });
 
             if (!response.ok) {
+                const errorMessage = `Error ${response.status}: ${response.statusText}`;
+                
+                // Si es 401 o 403, el token es inválido
+                if (response.status === 401 || response.status === 403) {
+                    return {
+                        success: false,
+                        error: `401-403: Token inválido o expirado`
+                    };
+                }
+                
                 return {
                     success: false,
-                    error: `Error ${response.status}: ${response.statusText}`
+                    error: errorMessage
                 };
             }
 
@@ -51,6 +62,22 @@ class BalanceService {
             };
         } catch (error: any) {
             console.error('Error getting balance:', error);
+            
+            // Detectar si es un error de red (backend no disponible)
+            if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                return {
+                    success: false,
+                    error: 'Backend no disponible. Por favor, verifica que el servidor esté en funcionamiento.'
+                };
+            }
+            
+            if (error.name === 'AbortError') {
+                return {
+                    success: false,
+                    error: 'Timeout: El servidor no respondió a tiempo.'
+                };
+            }
+            
             return {
                 success: false,
                 error: error.message || 'Error al obtener el balance'

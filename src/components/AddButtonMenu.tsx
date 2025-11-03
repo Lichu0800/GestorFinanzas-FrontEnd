@@ -71,14 +71,14 @@ const AddButtonMenu = ({ className = '' }: AddButtonMenuProps) => {
             {isOpen && (
                 <div
                     className="fixed inset-0 bg-black bg-opacity-25 transition-opacity z-40"
-                    onClick={() => setIsOpen(false)}
+                    onClick={toggleMenu}
                 />
             )}
 
-            <div className={`fixed bottom-6 right-6 ${className}`}>
+            <div className={`fixed bottom-6 right-6 z-50 ${className}`}>
                 {/* Panel desplegable */}
                 <div
-                    className={`absolute bottom-16 right-0 w-96 bg-white rounded-2xl shadow-2xl border border-gray-200 transform transition-all duration-300 ease-in-out z-50 ${
+                    className={`absolute bottom-16 right-0 w-96 bg-white rounded-2xl shadow-2xl border border-gray-200 transform transition-all duration-300 ease-in-out ${
                         isOpen
                             ? 'opacity-100 translate-y-0 scale-100'
                             : 'opacity-0 translate-y-4 scale-95 pointer-events-none'
@@ -92,7 +92,7 @@ const AddButtonMenu = ({ className = '' }: AddButtonMenuProps) => {
                                 <p className="text-sm text-gray-500">Agrega datos o configura filtros</p>
                             </div>
                             <button
-                                onClick={() => setIsOpen(false)}
+                                onClick={toggleMenu}
                                 className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                             >
                                 <X className="h-4 w-4 text-gray-500" />
@@ -137,7 +137,7 @@ const AddButtonMenu = ({ className = '' }: AddButtonMenuProps) => {
                 {/* Botón flotante principal */}
                 <button
                     onClick={toggleMenu}
-                    className={`w-14 h-14 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-full shadow-lg hover:shadow-xl transform transition-all duration-300 ease-in-out flex items-center justify-center z-50 ${
+                    className={`w-14 h-14 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-full shadow-lg hover:shadow-xl transform transition-all duration-300 ease-in-out flex items-center justify-center ${
                         isOpen ? 'rotate-45 scale-110' : 'hover:scale-110'
                     }`}
                 >

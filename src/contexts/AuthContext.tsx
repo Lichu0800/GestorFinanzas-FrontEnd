@@ -21,7 +21,8 @@ interface AuthProviderProps {
 export const AuthProvider = ({ children }: AuthProviderProps) => {
     const [user, setUser] = useState<User | null>(null);
     const [balance, setBalance] = useState<UserBalance | null>(null);
-    const [isLoading, setIsLoading] = useState(false);
+    const [isLoading, setIsLoading] = useState(true); // Inicia en true para validar sesión
+    const [backendUnavailable, setBackendUnavailable] = useState(false);
 
     const loadBalance = async () => {
         try {
@@ -29,9 +30,20 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             
             if (response.success && response.data) {
                 setBalance(response.data);
+                setBackendUnavailable(false);
+                return true;
+            } else {
+                // Si falla la carga del balance, solo mostrar el error sin cerrar sesión
+                console.warn('No se pudo cargar el balance:', response.error);
+                setBalance(null);
+                setBackendUnavailable(false); // No marcamos el backend como no disponible
+                return false;
             }
         } catch (error) {
             console.error('Error loading balance:', error);
+            setBalance(null);
+            setBackendUnavailable(false);
+            return false;
         }
     };
 
@@ -81,6 +93,31 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         await loadBalance();
     };
 
+    const retryConnection = async () => {
+        setIsLoading(true);
+        setBackendUnavailable(false);
+        
+        const userData = authService.getUserData();
+        if (userData && authService.isAuthenticated()) {
+            const balanceLoaded = await loadBalance();
+            
+            if (balanceLoaded) {
+                const user: User = {
+                    id: userData.id,
+                    username: userData.username,
+                    email: userData.email || ''
+                };
+                setUser(user);
+            } else {
+                authService.clearAuth();
+                setUser(null);
+                setBalance(null);
+            }
+        }
+        
+        setIsLoading(false);
+    };
+
     const register = async (registerData: RegisterCredentials): Promise<{ success: boolean; message?: string }> => {
         setIsLoading(true);
         
@@ -99,19 +136,35 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         }
     };
 
-    // Recuperar usuario del localStorage al cargar
+    // Recuperar usuario del localStorage al cargar y validar con el backend
     useEffect(() => {
-        const userData = authService.getUserData();
-        if (userData && authService.isAuthenticated()) {
-            const user: User = {
-                id: userData.id,
-                username: userData.username,
-                email: userData.email || ''
-            };
-            setUser(user);
-            // Cargar balance si el usuario está autenticado
-            loadBalance();
-        }
+        const validateSession = async () => {
+            const userData = authService.getUserData();
+            const token = authService.getToken();
+            
+            // Solo validar si hay datos de usuario Y token
+            if (userData && token) {
+                setIsLoading(true);
+                
+                // Restaurar usuario aunque falle el balance
+                const user: User = {
+                    id: userData.id,
+                    username: userData.username,
+                    email: userData.email || ''
+                };
+                setUser(user);
+                
+                // Intentar cargar el balance (sin afectar la sesión si falla)
+                await loadBalance();
+                
+                setIsLoading(false);
+            } else {
+                // No hay sesión guardada, no hacer nada
+                setIsLoading(false);
+            }
+        };
+
+        validateSession();
     }, []);
 
     const value: AuthContextType = {
@@ -121,7 +174,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         logout,
         register,
         refreshBalance,
-        isLoading
+        isLoading,
+        backendUnavailable,
+        retryConnection
     };
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
