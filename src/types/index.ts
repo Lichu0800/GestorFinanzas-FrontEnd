@@ -29,6 +29,13 @@ export interface Transaction {
     category: string;
 }
 
+export interface Category {
+    id: number;
+    name: string;
+    description?: string;
+    emoji?: string;
+}
+
 export interface Stock {
     symbol: string;
     quantity: number;

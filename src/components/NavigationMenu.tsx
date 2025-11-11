@@ -33,63 +33,63 @@ const NavigationMenu = ({ isOpen, onClose, activeSection, onSectionChange }: Nav
             title: 'Dashboard Principal',
             icon: <Home className="h-5 w-5" />,
             description: 'Vista general de tus finanzas',
-            color: 'text-blue-600'
+            color: 'text-primary-600'
         },
         {
             id: 'analytics',
             title: 'Análisis Avanzado',
             icon: <BarChart3 className="h-5 w-5" />,
             description: 'Gráficos detallados y tendencias',
-            color: 'text-purple-600'
+            color: 'text-secondary-600'
         },
         {
             id: 'transactions',
             title: 'Transacciones',
             icon: <CreditCard className="h-5 w-5" />,
             description: 'Historial completo de movimientos',
-            color: 'text-green-600'
+            color: 'text-accent-600'
         },
         {
             id: 'categories',
             title: 'Categorías',
             icon: <PieChart className="h-5 w-5" />,
             description: 'Gestión de categorías de gastos',
-            color: 'text-orange-600'
+            color: 'text-primary-700'
         },
         {
             id: 'goals',
             title: 'Metas Financieras',
             icon: <Target className="h-5 w-5" />,
             description: 'Establece y sigue tus objetivos',
-            color: 'text-red-600'
+            color: 'text-secondary-700'
         },
         {
             id: 'investments',
             title: 'Inversiones',
             icon: <TrendingUp className="h-5 w-5" />,
             description: 'Seguimiento de inversiones',
-            color: 'text-indigo-600'
+            color: 'text-accent-700'
         },
         {
             id: 'calendar',
             title: 'Calendario Financiero',
             icon: <Calendar className="h-5 w-5" />,
             description: 'Vista mensual de ingresos y gastos',
-            color: 'text-teal-600'
+            color: 'text-primary-500'
         },
         {
             id: 'profile',
             title: 'Perfil y Cuentas',
             icon: <User className="h-5 w-5" />,
             description: 'Gestión de perfil y cuentas bancarias',
-            color: 'text-gray-600'
+            color: 'text-accent-500'
         },
         {
             id: 'settings',
             title: 'Configuración',
             icon: <Settings className="h-5 w-5" />,
             description: 'Ajustes generales de la aplicación',
-            color: 'text-slate-600'
+            color: 'text-secondary-500'
         }
     ];
 
@@ -136,14 +136,14 @@ const NavigationMenu = ({ isOpen, onClose, activeSection, onSectionChange }: Nav
                             onClick={() => handleSectionClick(section.id)}
                             className={`w-full flex items-center space-x-4 p-4 rounded-xl transition-all duration-200 text-left ${
                                 activeSection === section.id
-                                    ? 'bg-blue-50 border-2 border-blue-200 shadow-md'
+                                    ? 'bg-gradient-to-r from-primary-50 to-accent-50 border-2 border-primary-200 shadow-md'
                                     : 'hover:bg-gray-50 border-2 border-transparent hover:shadow-sm'
                             }`}
                         >
                             <div
                                 className={`p-3 rounded-lg ${
                                     activeSection === section.id
-                                        ? 'bg-blue-100'
+                                        ? 'bg-gradient-to-br from-primary-100 to-accent-100'
                                         : 'bg-gray-100'
                                 } ${section.color}`}
                             >
@@ -151,12 +151,12 @@ const NavigationMenu = ({ isOpen, onClose, activeSection, onSectionChange }: Nav
                             </div>
                             <div className="flex-1 min-w-0">
                                 <h3 className={`font-semibold ${
-                                    activeSection === section.id ? 'text-blue-900' : 'text-gray-900'
+                                    activeSection === section.id ? 'text-primary-900' : 'text-gray-900'
                                 }`}>
                                     {section.title}
                                 </h3>
                                 <p className={`text-sm ${
-                                    activeSection === section.id ? 'text-blue-600' : 'text-gray-500'
+                                    activeSection === section.id ? 'text-primary-600' : 'text-gray-500'
                                 } truncate`}>
                                     {section.description}
                                 </p>

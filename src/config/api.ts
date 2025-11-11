@@ -48,9 +48,9 @@ export const API_ENDPOINTS = {
   // Finanzas (controladores REST típicos de Spring Boot)
   FINANCE: {
     BALANCE: `${API_BASE_URL}/finanzas/balance`,
-    BALANCE_ME: `${BASE_URL}/balance/me`, // Endpoint específico para balance del usuario
+    BALANCE_ME: `${BASE_URL}/api/balance/me`, // Endpoint específico para balance del usuario
     TRANSACTIONS: `${API_BASE_URL}/finanzas/transacciones`,
-    CATEGORIES: `${API_BASE_URL}/finanzas/categorias`,
+    CATEGORIES: `${BASE_URL}/api/category`, // Endpoint para categorías del usuario
     REPORTS: `${API_BASE_URL}/finanzas/reportes`,
     ACCOUNTS: `${API_BASE_URL}/finanzas/cuentas`,
   },

@@ -8,6 +8,7 @@ import NavigationMenu from '../components/NavigationMenu';
 import AddButtonMenu from '../components/AddButtonMenu';
 import AnalyticsSection from '../components/sections/AnalyticsSection';
 import TransactionsSection from '../components/sections/TransactionsSection';
+import CategoriesSection from '../components/sections/CategoriesSection';
 import type { Balance, Transaction } from '../types';
 
 const Dashboard = () => {
@@ -132,11 +133,7 @@ const Dashboard = () => {
             case 'transactions':
                 return <TransactionsSection />;
             case 'categories':
-                return (
-                    <div className="text-center py-20">
-                        <p className="text-gray-500 text-lg">Sección de Categorías - Próximamente</p>
-                    </div>
-                );
+                return <CategoriesSection />;
             case 'goals':
                 return (
                     <div className="text-center py-20">
@@ -172,7 +169,7 @@ const Dashboard = () => {
                     <div className="space-y-6">
                         {/* Título */}
                         <div className="mb-6">
-                            <h2 className="text-3xl font-bold bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent mb-2">
+                            <h2 className="text-3xl font-bold bg-gradient-to-r from-primary-600 via-accent-600 to-secondary-600 bg-clip-text text-transparent mb-2">
                                 Dashboard Financiero
                             </h2>
                             <p className="text-gray-600 text-sm">
@@ -233,9 +230,9 @@ const Dashboard = () => {
                         </div>
 
                         {/* Transacciones Recientes */}
-                        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
-                            <div className="bg-gradient-to-r from-violet-50 to-purple-50 px-6 py-4 border-b border-gray-200">
-                                <h3 className="text-xl font-bold text-gray-900">
+                        <div className="bg-white rounded-2xl shadow-lg border border-primary-100 overflow-hidden">
+                            <div className="bg-gradient-to-r from-primary-50 via-accent-50 to-secondary-50 px-6 py-4 border-b border-primary-200">
+                                <h3 className="text-xl font-bold bg-gradient-to-r from-primary-700 to-accent-700 bg-clip-text text-transparent">
                                     📋 Transacciones Recientes
                                 </h3>
                             </div>
@@ -274,7 +271,7 @@ const Dashboard = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-purple-50/30 relative">
+        <div className="min-h-screen bg-gradient-to-br from-primary-50 via-accent-50/40 to-secondary-50/40 relative">
             <Header onMenuToggle={() => setIsNavigationOpen(!isNavigationOpen)} />
             
             {/* Menú de Navegación (reemplaza al SideMenu original) */}
