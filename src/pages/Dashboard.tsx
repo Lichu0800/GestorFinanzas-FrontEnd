@@ -9,6 +9,7 @@ import AddButtonMenu from '../components/AddButtonMenu';
 import AnalyticsSection from '../components/sections/AnalyticsSection';
 import TransactionsSection from '../components/sections/TransactionsSection';
 import CategoriesSection from '../components/sections/CategoriesSection';
+import movementService from '../services/movementService';
 import type { Balance, Transaction } from '../types';
 
 const Dashboard = () => {
@@ -23,25 +24,44 @@ const Dashboard = () => {
     const [isNavigationOpen, setIsNavigationOpen] = useState(false);
     const [activeSection, setActiveSection] = useState('dashboard');
     const [isRefreshing, setIsRefreshing] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     const handleRefreshBalance = async () => {
         setIsRefreshing(true);
         try {
             await refreshBalance();
+            await loadFinancialData(); // Recargar también los movimientos
         } finally {
             setIsRefreshing(false);
         }
     };
 
-    useEffect(() => {
-        // Simular carga de datos - En el futuro esto será una llamada a la API de Spring Boot
-        const loadFinancialData = async () => {
-            setIsLoading(true);
+    const loadFinancialData = async () => {
+        try {
+            setError(null);
+            
+            // Obtener transacciones desde el backend
+            const transactions = await movementService.getTransactions();
 
-            // Simular delay de API
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            const totalIncome = transactions
+                .filter(t => t.type === 'income')
+                .reduce((sum, t) => sum + t.amount, 0);
 
-            // Datos de ejemplo que vendrían del backend
+            const totalExpenses = transactions
+                .filter(t => t.type === 'expense')
+                .reduce((sum, t) => sum + t.amount, 0);
+
+            setBalance({
+                total: totalIncome - totalExpenses,
+                income: totalIncome,
+                expenses: totalExpenses,
+                transactions: transactions
+            });
+        } catch (err) {
+            console.error('Error al cargar los movimientos:', err);
+            setError('No se pudieron cargar los movimientos del servidor');
+            
+            // Cargar datos de ejemplo si falla
             const mockTransactions: Transaction[] = [
                 {
                     id: '1',
@@ -59,38 +79,6 @@ const Dashboard = () => {
                     type: 'expense',
                     category: 'Alimentación'
                 },
-                {
-                    id: '3',
-                    description: 'Servicios',
-                    amount: 15000,
-                    date: '2024-10-03',
-                    type: 'expense',
-                    category: 'Servicios'
-                },
-                {
-                    id: '4',
-                    description: 'Freelance',
-                    amount: 50000,
-                    date: '2024-10-05',
-                    type: 'income',
-                    category: 'Trabajo Extra'
-                },
-                {
-                    id: '5',
-                    description: 'Transporte',
-                    amount: 8000,
-                    date: '2024-10-07',
-                    type: 'expense',
-                    category: 'Transporte'
-                },
-                {
-                    id: '6',
-                    description: 'Entretenimiento',
-                    amount: 12000,
-                    date: '2024-10-10',
-                    type: 'expense',
-                    category: 'Entretenimiento'
-                }
             ];
 
             const totalIncome = mockTransactions
@@ -107,10 +95,12 @@ const Dashboard = () => {
                 expenses: totalExpenses,
                 transactions: mockTransactions
             });
-
+        } finally {
             setIsLoading(false);
-        };
+        }
+    };
 
+    useEffect(() => {
         loadFinancialData();
     }, []);
 
@@ -180,13 +170,13 @@ const Dashboard = () => {
                         {/* Tarjetas de Balance */}
                         <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-6">
                             {/* Mensaje de error si no se pudo cargar el balance */}
-                            {!userBalance && (
+                            {(!userBalance || error) && (
                                 <div className="col-span-full bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-2 flex items-center gap-2">
                                     <svg className="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                                     </svg>
                                     <span className="text-sm text-yellow-800">
-                                        No se pudo cargar el balance del servidor. Mostrando datos simulados.
+                                        {error || 'No se pudo cargar el balance del servidor. Mostrando datos simulados.'}
                                     </span>
                                 </div>
                             )}
@@ -222,11 +212,6 @@ const Dashboard = () => {
                                 onRefresh={handleRefreshBalance}
                                 isRefreshing={isRefreshing}
                             />
-                        </div>
-
-                        {/* Gráficos */}
-                        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
-                            <FinancialCharts transactions={balance.transactions} />
                         </div>
 
                         {/* Transacciones Recientes */}
@@ -265,6 +250,11 @@ const Dashboard = () => {
                                 </div>
                             </div>
                         </div>
+
+                        {/* Gráficos */}
+                        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+                            <FinancialCharts transactions={balance.transactions} />
+                        </div>
                     </div>
                 );
         }
@@ -289,7 +279,7 @@ const Dashboard = () => {
             </main>
 
             {/* Botón flotante para acciones rápidas */}
-            <AddButtonMenu />
+            <AddButtonMenu onMovementCreated={loadFinancialData} />
         </div>
     );
 };

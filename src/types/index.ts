@@ -36,6 +36,22 @@ export interface Category {
     emoji?: string;
 }
 
+// Tipos para el endpoint de movimientos del backend
+export interface Movement {
+    id: number;
+    description: string;
+    amount: number;
+    movementType: 'INGRESO' | 'EGRESO';
+    currency: 'ARS' | 'USD';
+    reference: string | null;
+    fecha: string;
+    category: {
+        id: number;
+        name: string;
+        emoji: string;
+    };
+}
+
 export interface Stock {
     symbol: string;
     quantity: number;

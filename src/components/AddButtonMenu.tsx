@@ -1,36 +1,136 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus, X, TrendingUp, TrendingDown, Filter, Download, Settings } from 'lucide-react';
+import categoryService from '../services/categoryService';
+import movementService, { type CreateMovementData } from '../services/movementService';
+import type { Category } from '../types';
 
 interface AddButtonMenuProps {
     className?: string;
+    onMovementCreated?: () => void;
 }
 
-const AddButtonMenu = ({ className = '' }: AddButtonMenuProps) => {
+const AddButtonMenu = ({ className = '', onMovementCreated }: AddButtonMenuProps) => {
     const [isOpen, setIsOpen] = useState(false);
     const [activeSection, setActiveSection] = useState<string>('');
+    const [categories, setCategories] = useState<Category[]>([]);
+    const [isLoadingCategories, setIsLoadingCategories] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const quickActions = [
-        {
-            id: 'add-transaction',
-            title: 'Agregar Transacción',
-            icon: <Plus className="h-5 w-5" />,
-            description: 'Registra un nuevo ingreso o gasto',
-            color: 'bg-blue-500 hover:bg-blue-600'
-        },
+    // Estados del formulario
+    const [formData, setFormData] = useState({
+        description: '',
+        amount: '',
+        currency: 'ARS' as 'ARS' | 'USD',
+        categoryID: '',
+        fecha: new Date().toISOString().split('T')[0],
+    });
+
+    // Cargar categorías cuando se abre el menú
+    useEffect(() => {
+        if (isOpen && categories.length === 0) {
+            loadCategories();
+        }
+    }, [isOpen]);
+
+    const loadCategories = async () => {
+        setIsLoadingCategories(true);
+        try {
+            const response = await categoryService.getCategories();
+            if (response.success && response.data) {
+                setCategories(response.data);
+            } else {
+                console.error('Error al cargar categorías:', response.error);
+            }
+        } catch (error) {
+            console.error('Error al cargar categorías:', error);
+        } finally {
+            setIsLoadingCategories(false);
+        }
+    };
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({
+            ...prev,
+            [name]: value
+        }));
+    };
+
+    const handleSubmit = async (movementType: 'INGRESO' | 'EGRESO') => {
+        // Validaciones
+        if (!formData.description.trim()) {
+            alert('Por favor ingresa una descripción');
+            return;
+        }
+        if (!formData.amount || parseFloat(formData.amount) <= 0) {
+            alert('Por favor ingresa un monto válido');
+            return;
+        }
+        if (!formData.categoryID) {
+            alert('Por favor selecciona una categoría');
+            return;
+        }
+
+        setIsSubmitting(true);
+        try {
+            const movementData: CreateMovementData = {
+                description: formData.description,
+                amount: parseFloat(formData.amount),
+                movementType: movementType,
+                currency: formData.currency,
+                categoryID: parseInt(formData.categoryID),
+                fecha: new Date(formData.fecha).toISOString(),
+            };
+
+            await movementService.createMovement(movementData);
+            
+            // Limpiar formulario
+            setFormData({
+                description: '',
+                amount: '',
+                currency: 'ARS',
+                categoryID: '',
+                fecha: new Date().toISOString().split('T')[0],
+            });
+
+            // Cerrar sección activa y menú
+            setActiveSection('');
+            
+            // Notificar que se creó un movimiento
+            if (onMovementCreated) {
+                onMovementCreated();
+            }
+
+            alert(`${movementType === 'INGRESO' ? 'Ingreso' : 'Egreso'} registrado exitosamente`);
+        } catch (error: any) {
+            console.error('Error al crear movimiento:', error);
+            alert(`Error al registrar el ${movementType === 'INGRESO' ? 'ingreso' : 'egreso'}: ${error.message}`);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const incomeActions = [
         {
             id: 'add-income',
             title: 'Agregar Ingreso',
             icon: <TrendingUp className="h-5 w-5" />,
             description: 'Registra un nuevo ingreso',
             color: 'bg-green-500 hover:bg-green-600'
-        },
+        }
+    ];
+
+    const expenseActions = [
         {
             id: 'add-expense',
-            title: 'Agregar Gasto',
+            title: 'Agregar Egreso',
             icon: <TrendingDown className="h-5 w-5" />,
             description: 'Registra un nuevo gasto',
             color: 'bg-red-500 hover:bg-red-600'
-        },
+        }
+    ];
+
+    const otherActions = [
         {
             id: 'filters',
             title: 'Filtros Avanzados',
@@ -62,6 +162,136 @@ const AddButtonMenu = ({ className = '' }: AddButtonMenuProps) => {
         setIsOpen(!isOpen);
         if (isOpen) {
             setActiveSection('');
+        }
+    };
+
+    const renderActionContent = (actionId: string) => {
+        switch (actionId) {
+            case 'add-income':
+            case 'add-expense':
+                const isIncome = actionId === 'add-income';
+                const movementType = isIncome ? 'INGRESO' : 'EGRESO';
+                
+                return (
+                    <div className="space-y-3">
+                        <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">
+                                Descripción
+                            </label>
+                            <input
+                                type="text"
+                                name="description"
+                                value={formData.description}
+                                onChange={handleInputChange}
+                                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                placeholder="Ej: Compra de supermercado"
+                            />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2">
+                            <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">
+                                    Monto
+                                </label>
+                                <input
+                                    type="number"
+                                    name="amount"
+                                    value={formData.amount}
+                                    onChange={handleInputChange}
+                                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                    placeholder="0.00"
+                                    step="0.01"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">
+                                    Moneda
+                                </label>
+                                <select
+                                    name="currency"
+                                    value={formData.currency}
+                                    onChange={handleInputChange}
+                                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                >
+                                    <option value="ARS">ARS (Peso)</option>
+                                    <option value="USD">USD (Dólar)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">
+                                Fecha
+                            </label>
+                            <input
+                                type="date"
+                                name="fecha"
+                                value={formData.fecha}
+                                onChange={handleInputChange}
+                                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">
+                                Categoría
+                            </label>
+                            <select
+                                name="categoryID"
+                                value={formData.categoryID}
+                                onChange={handleInputChange}
+                                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                disabled={isLoadingCategories}
+                            >
+                                <option value="">
+                                    {isLoadingCategories ? 'Cargando categorías...' : 'Seleccionar categoría'}
+                                </option>
+                                {categories.map(category => (
+                                    <option key={category.id} value={category.id}>
+                                        {category.emoji ? `${category.emoji} ` : ''}{category.name}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <button 
+                            onClick={() => handleSubmit(movementType)}
+                            disabled={isSubmitting}
+                            className={`w-full ${
+                                isIncome 
+                                    ? 'bg-green-600 hover:bg-green-700' 
+                                    : 'bg-red-600 hover:bg-red-700'
+                            } text-white py-2 px-4 rounded-lg transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed`}
+                        >
+                            {isSubmitting ? 'Guardando...' : `Agregar ${isIncome ? 'Ingreso' : 'Egreso'}`}
+                        </button>
+                    </div>
+                );
+
+            case 'filters':
+                return (
+                    <div className="space-y-3">
+                        <p className="text-xs text-gray-600">Función de filtros en desarrollo</p>
+                    </div>
+                );
+
+            case 'export':
+                return (
+                    <div className="space-y-3">
+                        <p className="text-xs text-gray-600">Función de exportación en desarrollo</p>
+                    </div>
+                );
+
+            case 'quick-settings':
+                return (
+                    <div className="space-y-3">
+                        <p className="text-xs text-gray-600">Configuración rápida en desarrollo</p>
+                    </div>
+                );
+
+            default:
+                return null;
         }
     };
 
@@ -102,34 +332,121 @@ const AddButtonMenu = ({ className = '' }: AddButtonMenuProps) => {
 
                     {/* Contenido del panel */}
                     <div className="p-4 max-h-96 overflow-y-auto">
-                        <div className="space-y-2">
-                            {quickActions.map((action) => (
-                                <div key={action.id}>
-                                    <button
-                                        onClick={() => handleActionClick(action.id)}
-                                        className={`w-full flex items-center space-x-3 p-3 rounded-xl transition-all duration-200 ${
-                                            activeSection === action.id
-                                                ? 'bg-gray-50 border-2 border-gray-200'
-                                                : 'hover:bg-gray-50 border-2 border-transparent'
-                                        }`}
-                                    >
-                                        <div className={`p-2 rounded-lg text-white ${action.color}`}>
-                                            {action.icon}
-                                        </div>
-                                        <div className="flex-1 text-left">
-                                            <h4 className="font-medium text-gray-900 text-sm">{action.title}</h4>
-                                            <p className="text-xs text-gray-500">{action.description}</p>
-                                        </div>
-                                    </button>
+                        {/* Sección de Ingresos */}
+                        <div className="mb-6">
+                            <div className="flex items-center space-x-2 mb-3">
+                                <TrendingUp className="h-5 w-5 text-green-600" />
+                                <h3 className="font-semibold text-gray-900">Ingresos</h3>
+                            </div>
+                            <div className="space-y-2">
+                                {incomeActions.map((action) => (
+                                    <div key={action.id}>
+                                        <button
+                                            onClick={() => handleActionClick(action.id)}
+                                            className={`w-full flex items-center space-x-3 p-3 rounded-xl transition-all duration-200 ${
+                                                activeSection === action.id
+                                                    ? 'bg-green-50 border-2 border-green-200'
+                                                    : 'hover:bg-green-50 border-2 border-transparent'
+                                            }`}
+                                        >
+                                            <div className={`p-2 rounded-lg text-white ${action.color}`}>
+                                                {action.icon}
+                                            </div>
+                                            <div className="flex-1 text-left">
+                                                <h4 className="font-medium text-gray-900 text-sm">{action.title}</h4>
+                                                <p className="text-xs text-gray-500">{action.description}</p>
+                                            </div>
+                                        </button>
 
-                                    {/* Contenido expandido */}
-                                    {activeSection === action.id && (
-                                        <div className="mt-2 ml-4 p-4 bg-gray-50 rounded-lg border-l-4 border-gray-200">
-                                            {renderActionContent(action.id)}
-                                        </div>
-                                    )}
-                                </div>
-                            ))}
+                                        {/* Contenido expandido */}
+                                        {activeSection === action.id && (
+                                            <div className="mt-2 ml-4 p-4 bg-green-50 rounded-lg border-l-4 border-green-300">
+                                                {renderActionContent(action.id)}
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Divisor */}
+                        <div className="border-t border-gray-200 mb-6"></div>
+
+                        {/* Sección de Egresos */}
+                        <div className="mb-6">
+                            <div className="flex items-center space-x-2 mb-3">
+                                <TrendingDown className="h-5 w-5 text-red-600" />
+                                <h3 className="font-semibold text-gray-900">Egresos</h3>
+                            </div>
+                            <div className="space-y-2">
+                                {expenseActions.map((action) => (
+                                    <div key={action.id}>
+                                        <button
+                                            onClick={() => handleActionClick(action.id)}
+                                            className={`w-full flex items-center space-x-3 p-3 rounded-xl transition-all duration-200 ${
+                                                activeSection === action.id
+                                                    ? 'bg-red-50 border-2 border-red-200'
+                                                    : 'hover:bg-red-50 border-2 border-transparent'
+                                            }`}
+                                        >
+                                            <div className={`p-2 rounded-lg text-white ${action.color}`}>
+                                                {action.icon}
+                                            </div>
+                                            <div className="flex-1 text-left">
+                                                <h4 className="font-medium text-gray-900 text-sm">{action.title}</h4>
+                                                <p className="text-xs text-gray-500">{action.description}</p>
+                                            </div>
+                                        </button>
+
+                                        {/* Contenido expandido */}
+                                        {activeSection === action.id && (
+                                            <div className="mt-2 ml-4 p-4 bg-red-50 rounded-lg border-l-4 border-red-300">
+                                                {renderActionContent(action.id)}
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Divisor */}
+                        <div className="border-t border-gray-200 mb-6"></div>
+
+                        {/* Otras Acciones */}
+                        <div>
+                            <div className="flex items-center space-x-2 mb-3">
+                                <Settings className="h-5 w-5 text-gray-600" />
+                                <h3 className="font-semibold text-gray-900">Otras Acciones</h3>
+                            </div>
+                            <div className="space-y-2">
+                                {otherActions.map((action) => (
+                                    <div key={action.id}>
+                                        <button
+                                            onClick={() => handleActionClick(action.id)}
+                                            className={`w-full flex items-center space-x-3 p-3 rounded-xl transition-all duration-200 ${
+                                                activeSection === action.id
+                                                    ? 'bg-gray-50 border-2 border-gray-200'
+                                                    : 'hover:bg-gray-50 border-2 border-transparent'
+                                            }`}
+                                        >
+                                            <div className={`p-2 rounded-lg text-white ${action.color}`}>
+                                                {action.icon}
+                                            </div>
+                                            <div className="flex-1 text-left">
+                                                <h4 className="font-medium text-gray-900 text-sm">{action.title}</h4>
+                                                <p className="text-xs text-gray-500">{action.description}</p>
+                                            </div>
+                                        </button>
+
+                                        {/* Contenido expandido */}
+                                        {activeSection === action.id && (
+                                            <div className="mt-2 ml-4 p-4 bg-gray-50 rounded-lg border-l-4 border-gray-200">
+                                                {renderActionContent(action.id)}
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -146,192 +463,6 @@ const AddButtonMenu = ({ className = '' }: AddButtonMenuProps) => {
             </div>
         </>
     );
-};
-
-// Contenido de cada acción (reutilizando la lógica del SideMenu original)
-const renderActionContent = (actionId: string) => {
-    switch (actionId) {
-        case 'add-transaction':
-        case 'add-income':
-        case 'add-expense':
-            return (
-                <div className="space-y-3">
-                    <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">
-                            Descripción
-                        </label>
-                        <input
-                            type="text"
-                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                            placeholder="Ej: Compra de supermercado"
-                        />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2">
-                        <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-1">
-                                Monto
-                            </label>
-                            <input
-                                type="number"
-                                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                                placeholder="0.00"
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-1">
-                                Fecha
-                            </label>
-                            <input
-                                type="date"
-                                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                                defaultValue={new Date().toISOString().split('T')[0]}
-                            />
-                        </div>
-                    </div>
-
-                    {actionId === 'add-transaction' && (
-                        <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-1">
-                                Tipo
-                            </label>
-                            <select className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
-                                <option value="income">Ingreso</option>
-                                <option value="expense">Gasto</option>
-                            </select>
-                        </div>
-                    )}
-
-                    <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">
-                            Categoría
-                        </label>
-                        <select className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
-                            <option value="">Seleccionar categoría</option>
-                            <option value="alimentacion">Alimentación</option>
-                            <option value="transporte">Transporte</option>
-                            <option value="servicios">Servicios</option>
-                            <option value="entretenimiento">Entretenimiento</option>
-                            <option value="trabajo">Trabajo</option>
-                            <option value="otros">Otros</option>
-                        </select>
-                    </div>
-
-                    <button className="w-full bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition-colors font-medium text-sm">
-                        Agregar {actionId === 'add-income' ? 'Ingreso' : actionId === 'add-expense' ? 'Gasto' : 'Transacción'}
-                    </button>
-                </div>
-            );
-
-        case 'filters':
-            return (
-                <div className="space-y-3">
-                    <div className="grid grid-cols-2 gap-2">
-                        <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-1">
-                                Desde
-                            </label>
-                            <input
-                                type="date"
-                                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-1">
-                                Hasta
-                            </label>
-                            <input
-                                type="date"
-                                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                            />
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2">
-                        <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-1">
-                                Categoría
-                            </label>
-                            <select className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
-                                <option value="">Todas</option>
-                                <option value="alimentacion">Alimentación</option>
-                                <option value="transporte">Transporte</option>
-                                <option value="servicios">Servicios</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-1">
-                                Tipo
-                            </label>
-                            <select className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
-                                <option value="">Todos</option>
-                                <option value="income">Ingresos</option>
-                                <option value="expense">Gastos</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div className="flex space-x-2">
-                        <button className="flex-1 bg-indigo-600 text-white py-2 px-3 rounded-lg hover:bg-indigo-700 transition-colors font-medium text-sm">
-                            Aplicar
-                        </button>
-                        <button className="flex-1 bg-gray-200 text-gray-700 py-2 px-3 rounded-lg hover:bg-gray-300 transition-colors font-medium text-sm">
-                            Limpiar
-                        </button>
-                    </div>
-                </div>
-            );
-
-        case 'export':
-            return (
-                <div className="space-y-2">
-                    <p className="text-xs text-gray-600 mb-3">
-                        Exporta tus datos financieros
-                    </p>
-                    
-                    <button className="w-full bg-green-600 text-white py-2 px-3 rounded-lg hover:bg-green-700 transition-colors font-medium text-sm flex items-center justify-center space-x-2">
-                        <Download className="h-4 w-4" />
-                        <span>Excel</span>
-                    </button>
-
-                    <button className="w-full bg-blue-600 text-white py-2 px-3 rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm flex items-center justify-center space-x-2">
-                        <Download className="h-4 w-4" />
-                        <span>PDF</span>
-                    </button>
-                </div>
-            );
-
-        case 'quick-settings':
-            return (
-                <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                        <span className="text-xs font-medium text-gray-700">Notificaciones</span>
-                        <button className="relative inline-flex h-5 w-9 items-center rounded-full bg-indigo-600 transition-colors">
-                            <span className="inline-block h-3 w-3 transform rounded-full bg-white transition-transform translate-x-5" />
-                        </button>
-                    </div>
-
-                    <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">
-                            Moneda
-                        </label>
-                        <select className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
-                            <option value="ARS">Peso Argentino (ARS)</option>
-                            <option value="USD">Dólar (USD)</option>
-                            <option value="EUR">Euro (EUR)</option>
-                        </select>
-                    </div>
-                </div>
-            );
-
-        default:
-            return (
-                <div className="text-xs text-gray-500">
-                    Funcionalidad próximamente disponible
-                </div>
-            );
-    }
 };
 
 export default AddButtonMenu;

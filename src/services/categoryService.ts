@@ -53,6 +53,11 @@ class CategoryService {
 
             if (!response.ok) {
                 if (response.status === 401 || response.status === 403) {
+                    console.warn('Token inválido o expirado. Redirigiendo al login...');
+                    localStorage.removeItem(ENV_CONFIG.STORAGE_KEYS.AUTH_TOKEN);
+                    localStorage.removeItem(ENV_CONFIG.STORAGE_KEYS.USER_DATA);
+                    window.location.href = '/login';
+                    
                     return {
                         success: false,
                         error: 'No autorizado. Por favor, inicia sesión nuevamente.'
@@ -111,6 +116,11 @@ class CategoryService {
 
             if (!response.ok) {
                 if (response.status === 401 || response.status === 403) {
+                    console.warn('Token inválido o expirado. Redirigiendo al login...');
+                    localStorage.removeItem(ENV_CONFIG.STORAGE_KEYS.AUTH_TOKEN);
+                    localStorage.removeItem(ENV_CONFIG.STORAGE_KEYS.USER_DATA);
+                    window.location.href = '/login';
+                    
                     return {
                         success: false,
                         error: 'No autorizado. Por favor, inicia sesión nuevamente.'
@@ -161,6 +171,11 @@ class CategoryService {
 
             if (!response.ok) {
                 if (response.status === 401 || response.status === 403) {
+                    console.warn('Token inválido o expirado. Redirigiendo al login...');
+                    localStorage.removeItem(ENV_CONFIG.STORAGE_KEYS.AUTH_TOKEN);
+                    localStorage.removeItem(ENV_CONFIG.STORAGE_KEYS.USER_DATA);
+                    window.location.href = '/login';
+                    
                     return {
                         success: false,
                         error: 'No autorizado. Por favor, inicia sesión nuevamente.'
@@ -210,6 +225,11 @@ class CategoryService {
 
             if (!response.ok) {
                 if (response.status === 401 || response.status === 403) {
+                    console.warn('Token inválido o expirado. Redirigiendo al login...');
+                    localStorage.removeItem(ENV_CONFIG.STORAGE_KEYS.AUTH_TOKEN);
+                    localStorage.removeItem(ENV_CONFIG.STORAGE_KEYS.USER_DATA);
+                    window.location.href = '/login';
+                    
                     return {
                         success: false,
                         error: 'No autorizado. Por favor, inicia sesión nuevamente.'

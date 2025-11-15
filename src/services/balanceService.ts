@@ -40,11 +40,16 @@ class BalanceService {
             if (!response.ok) {
                 const errorMessage = `Error ${response.status}: ${response.statusText}`;
                 
-                // Si es 401 o 403, el token es inválido
+                // Si es 401 o 403, el token es inválido - limpiar y redirigir
                 if (response.status === 401 || response.status === 403) {
+                    console.warn('Token inválido o expirado. Redirigiendo al login...');
+                    localStorage.removeItem(ENV_CONFIG.STORAGE_KEYS.AUTH_TOKEN);
+                    localStorage.removeItem(ENV_CONFIG.STORAGE_KEYS.USER_DATA);
+                    window.location.href = '/login';
+                    
                     return {
                         success: false,
-                        error: `401-403: Token inválido o expirado`
+                        error: `Token inválido o expirado`
                     };
                 }
                 
