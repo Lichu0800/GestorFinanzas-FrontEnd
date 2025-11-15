@@ -15,6 +15,7 @@ export interface CreateMovementData {
     currency: 'ARS' | 'USD';
     categoryID: number;
     fecha: string; // ISO-8601
+    reference?: string; // Referencia opcional
 }
 
 class MovementService {

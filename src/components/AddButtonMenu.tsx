@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, X, TrendingUp, TrendingDown, Filter, Download, Settings } from 'lucide-react';
+import { Plus, X, TrendingUp, TrendingDown } from 'lucide-react';
 import categoryService from '../services/categoryService';
 import movementService, { type CreateMovementData } from '../services/movementService';
 import type { Category } from '../types';
@@ -23,11 +23,12 @@ const AddButtonMenu = ({ className = '', onMovementCreated }: AddButtonMenuProps
         currency: 'ARS' as 'ARS' | 'USD',
         categoryID: '',
         fecha: new Date().toISOString().split('T')[0],
+        reference: '',
     });
 
     // Cargar categorías cuando se abre el menú
     useEffect(() => {
-        if (isOpen && categories.length === 0) {
+        if (isOpen) {
             loadCategories();
         }
     }, [isOpen]);
@@ -37,6 +38,7 @@ const AddButtonMenu = ({ className = '', onMovementCreated }: AddButtonMenuProps
         try {
             const response = await categoryService.getCategories();
             if (response.success && response.data) {
+                console.log('📋 Categorías cargadas:', response.data.length);
                 setCategories(response.data);
             } else {
                 console.error('Error al cargar categorías:', response.error);
@@ -80,6 +82,7 @@ const AddButtonMenu = ({ className = '', onMovementCreated }: AddButtonMenuProps
                 currency: formData.currency,
                 categoryID: parseInt(formData.categoryID),
                 fecha: new Date(formData.fecha).toISOString(),
+                reference: formData.reference || undefined,
             };
 
             await movementService.createMovement(movementData);
@@ -91,6 +94,7 @@ const AddButtonMenu = ({ className = '', onMovementCreated }: AddButtonMenuProps
                 currency: 'ARS',
                 categoryID: '',
                 fecha: new Date().toISOString().split('T')[0],
+                reference: '',
             });
 
             // Cerrar sección activa y menú
@@ -127,30 +131,6 @@ const AddButtonMenu = ({ className = '', onMovementCreated }: AddButtonMenuProps
             icon: <TrendingDown className="h-5 w-5" />,
             description: 'Registra un nuevo gasto',
             color: 'bg-red-500 hover:bg-red-600'
-        }
-    ];
-
-    const otherActions = [
-        {
-            id: 'filters',
-            title: 'Filtros Avanzados',
-            icon: <Filter className="h-5 w-5" />,
-            description: 'Filtra transacciones por criterios',
-            color: 'bg-purple-500 hover:bg-purple-600'
-        },
-        {
-            id: 'export',
-            title: 'Exportar Datos',
-            icon: <Download className="h-5 w-5" />,
-            description: 'Descarga tu información financiera',
-            color: 'bg-orange-500 hover:bg-orange-600'
-        },
-        {
-            id: 'quick-settings',
-            title: 'Configuración Rápida',
-            icon: <Settings className="h-5 w-5" />,
-            description: 'Ajustes rápidos de la aplicación',
-            color: 'bg-gray-500 hover:bg-gray-600'
         }
     ];
 
@@ -255,6 +235,20 @@ const AddButtonMenu = ({ className = '', onMovementCreated }: AddButtonMenuProps
                             </select>
                         </div>
 
+                        <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">
+                                Referencia (Opcional)
+                            </label>
+                            <input
+                                type="text"
+                                name="reference"
+                                value={formData.reference}
+                                onChange={handleInputChange}
+                                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                placeholder="Ej: Factura #123, Transferencia, etc."
+                            />
+                        </div>
+
                         <button 
                             onClick={() => handleSubmit(movementType)}
                             disabled={isSubmitting}
@@ -266,27 +260,6 @@ const AddButtonMenu = ({ className = '', onMovementCreated }: AddButtonMenuProps
                         >
                             {isSubmitting ? 'Guardando...' : `Agregar ${isIncome ? 'Ingreso' : 'Egreso'}`}
                         </button>
-                    </div>
-                );
-
-            case 'filters':
-                return (
-                    <div className="space-y-3">
-                        <p className="text-xs text-gray-600">Función de filtros en desarrollo</p>
-                    </div>
-                );
-
-            case 'export':
-                return (
-                    <div className="space-y-3">
-                        <p className="text-xs text-gray-600">Función de exportación en desarrollo</p>
-                    </div>
-                );
-
-            case 'quick-settings':
-                return (
-                    <div className="space-y-3">
-                        <p className="text-xs text-gray-600">Configuración rápida en desarrollo</p>
                     </div>
                 );
 
@@ -401,46 +374,6 @@ const AddButtonMenu = ({ className = '', onMovementCreated }: AddButtonMenuProps
                                         {/* Contenido expandido */}
                                         {activeSection === action.id && (
                                             <div className="mt-2 ml-4 p-4 bg-red-50 rounded-lg border-l-4 border-red-300">
-                                                {renderActionContent(action.id)}
-                                            </div>
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Divisor */}
-                        <div className="border-t border-gray-200 mb-6"></div>
-
-                        {/* Otras Acciones */}
-                        <div>
-                            <div className="flex items-center space-x-2 mb-3">
-                                <Settings className="h-5 w-5 text-gray-600" />
-                                <h3 className="font-semibold text-gray-900">Otras Acciones</h3>
-                            </div>
-                            <div className="space-y-2">
-                                {otherActions.map((action) => (
-                                    <div key={action.id}>
-                                        <button
-                                            onClick={() => handleActionClick(action.id)}
-                                            className={`w-full flex items-center space-x-3 p-3 rounded-xl transition-all duration-200 ${
-                                                activeSection === action.id
-                                                    ? 'bg-gray-50 border-2 border-gray-200'
-                                                    : 'hover:bg-gray-50 border-2 border-transparent'
-                                            }`}
-                                        >
-                                            <div className={`p-2 rounded-lg text-white ${action.color}`}>
-                                                {action.icon}
-                                            </div>
-                                            <div className="flex-1 text-left">
-                                                <h4 className="font-medium text-gray-900 text-sm">{action.title}</h4>
-                                                <p className="text-xs text-gray-500">{action.description}</p>
-                                            </div>
-                                        </button>
-
-                                        {/* Contenido expandido */}
-                                        {activeSection === action.id && (
-                                            <div className="mt-2 ml-4 p-4 bg-gray-50 rounded-lg border-l-4 border-gray-200">
                                                 {renderActionContent(action.id)}
                                             </div>
                                         )}
