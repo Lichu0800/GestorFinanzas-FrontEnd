@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { CreditCard, Search, Filter, Calendar, Download, Eye, Edit, TrendingDown, DollarSign, X } from 'lucide-react';
+import { CreditCard, Filter, Calendar, Download, Eye, Edit, TrendingDown, DollarSign, X } from 'lucide-react';
 import movementService, { type MovementFilters } from '../../services/movementService';
 import categoryService from '../../services/categoryService';
+import { exportTransactionsToPDF } from '../../services/pdfExportService';
 import type { Category } from '../../types';
 
 interface TransactionWithAccount {
@@ -179,6 +180,20 @@ const TransactionsSection = () => {
         });
     };
 
+    const handleExportToPDF = () => {
+        if (transactions.length === 0) {
+            alert('No hay transacciones para exportar');
+            return;
+        }
+        
+        try {
+            exportTransactionsToPDF(transactions);
+        } catch (error) {
+            console.error('Error al exportar PDF:', error);
+            alert('Error al generar el PDF. Por favor, intente nuevamente.');
+        }
+    };
+
     // Calcular estadísticas
     const totalTransactions = transactions.length;
     const thisMonthTotal = transactions
@@ -277,7 +292,11 @@ const TransactionsSection = () => {
                                 <Filter className="h-4 w-4 mr-2" />
                                 {showFilters ? 'Ocultar Filtros' : 'Más Filtros'}
                             </button>
-                            <button className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                            <button 
+                                onClick={handleExportToPDF}
+                                disabled={isLoading || transactions.length === 0}
+                                className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
                                 <Download className="h-4 w-4 mr-2" />
                                 Exportar
                             </button>
