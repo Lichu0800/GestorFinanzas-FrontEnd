@@ -44,7 +44,7 @@ export interface Movement {
     movementType: 'INGRESO' | 'EGRESO';
     currency: 'ARS' | 'USD';
     reference: string | null;
-    fecha: string;
+    date: string;
     category: {
         id: number;
         name: string;

@@ -81,7 +81,7 @@ const AddButtonMenu = ({ className = '', onMovementCreated }: AddButtonMenuProps
                 movementType: movementType,
                 currency: formData.currency,
                 categoryID: parseInt(formData.categoryID),
-                fecha: new Date(formData.fecha).toISOString(),
+                date: new Date(formData.fecha).toISOString(),
                 reference: formData.reference || undefined,
             };
 
@@ -99,13 +99,12 @@ const AddButtonMenu = ({ className = '', onMovementCreated }: AddButtonMenuProps
 
             // Cerrar sección activa y menú
             setActiveSection('');
+            setIsOpen(false);
             
             // Notificar que se creó un movimiento
             if (onMovementCreated) {
                 onMovementCreated();
             }
-
-            alert(`${movementType === 'INGRESO' ? 'Ingreso' : 'Egreso'} registrado exitosamente`);
         } catch (error: any) {
             console.error('Error al crear movimiento:', error);
             alert(`Error al registrar el ${movementType === 'INGRESO' ? 'ingreso' : 'egreso'}: ${error.message}`);

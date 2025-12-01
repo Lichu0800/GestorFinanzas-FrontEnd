@@ -25,6 +25,7 @@ const Dashboard = () => {
     const [activeSection, setActiveSection] = useState('dashboard');
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
 
     const handleRefreshBalance = async () => {
         setIsRefreshing(true);
@@ -34,6 +35,14 @@ const Dashboard = () => {
         } finally {
             setIsRefreshing(false);
         }
+    };
+
+    const handleMovementCreated = async () => {
+        // Recargar tanto los movimientos como el balance del usuario
+        await loadFinancialData();
+        await refreshBalance();
+        // Incrementar trigger para actualizar TransactionsSection
+        setRefreshTrigger(prev => prev + 1);
     };
 
     const loadFinancialData = async () => {
@@ -121,7 +130,7 @@ const Dashboard = () => {
             case 'analytics':
                 return <AnalyticsSection />;
             case 'transactions':
-                return <TransactionsSection />;
+                return <TransactionsSection key={refreshTrigger} />;
             case 'categories':
                 return <CategoriesSection />;
             case 'goals':
@@ -183,10 +192,12 @@ const Dashboard = () => {
                             
                             <BalanceCard
                                 title="Balance Total"
-                                amount={balance.total}
+                                amount={(userBalance?.ars || 0) + (userBalance?.dolares || 0)}
                                 type="total"
                                 change={8.5}
                                 showCurrencySwitch={true}
+                                arsAmount={userBalance?.ars || 0}
+                                usdAmount={userBalance?.dolares || 0}
                             />
                             <BalanceCard
                                 title="Ingresos"
@@ -279,7 +290,7 @@ const Dashboard = () => {
             </main>
 
             {/* Botón flotante para acciones rápidas */}
-            <AddButtonMenu onMovementCreated={loadFinancialData} />
+            <AddButtonMenu onMovementCreated={handleMovementCreated} />
         </div>
     );
 };

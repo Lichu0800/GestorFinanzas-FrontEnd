@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
-import { CreditCard, Search, Filter, Calendar, Download, Eye, Edit, TrendingDown, DollarSign } from 'lucide-react';
-import movementService from '../../services/movementService';
+import { CreditCard, Search, Filter, Calendar, Download, Eye, Edit, TrendingDown, DollarSign, X } from 'lucide-react';
+import movementService, { type MovementFilters } from '../../services/movementService';
+import categoryService from '../../services/categoryService';
+import type { Category } from '../../types';
 
 interface TransactionWithAccount {
     id: string;
@@ -17,22 +19,49 @@ const TransactionsSection = () => {
     const [transactions, setTransactions] = useState<TransactionWithAccount[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    
+    // Filter state
+    const [filters, setFilters] = useState<MovementFilters>({
+        page: 0,
+        size: 20
+    });
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
+    const [selectedCategory, setSelectedCategory] = useState<string>('');
+    const [selectedType, setSelectedType] = useState<string>('');
+    const [showFilters, setShowFilters] = useState(false);
+    
+    // Edit modal state
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [editingTransaction, setEditingTransaction] = useState<TransactionWithAccount | null>(null);
+    const [categories, setCategories] = useState<Category[]>([]);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [editFormData, setEditFormData] = useState({
+        description: '',
+        amount: '',
+        movementType: 'INGRESO' as 'INGRESO' | 'EGRESO',
+        currency: 'ARS' as 'ARS' | 'USD',
+        categoryID: '',
+        date: '',
+        reference: ''
+    });
 
     useEffect(() => {
         loadTransactions();
-    }, []);
+        loadCategories();
+    }, [filters]);
 
     const loadTransactions = async () => {
         try {
             setIsLoading(true);
             setError(null);
             
-            const movements = await movementService.getMovements();
+            const movements = await movementService.getMovements(filters);
             
             // Convertir los movimientos al formato con cuenta
             const formattedTransactions: TransactionWithAccount[] = movements.map(movement => ({
                 id: movement.id.toString(),
-                date: movement.fecha,
+                date: movement.date,
                 description: movement.description,
                 category: `${movement.category.emoji} ${movement.category.name}`,
                 amount: movement.amount,
@@ -48,6 +77,106 @@ const TransactionsSection = () => {
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const loadCategories = async () => {
+        try {
+            const response = await categoryService.getCategories();
+            if (response.success && response.data) {
+                setCategories(response.data);
+            }
+        } catch (err) {
+            console.error('Error al cargar categorías:', err);
+        }
+    };
+
+    const handleEditClick = async (transaction: TransactionWithAccount) => {
+        setEditingTransaction(transaction);
+        
+        // Obtener el movimiento completo para tener el categoryID
+        const movements = await movementService.getMovements();
+        const fullMovement = movements.find(m => m.id.toString() === transaction.id);
+        
+        if (fullMovement) {
+            setEditFormData({
+                description: fullMovement.description,
+                amount: fullMovement.amount.toString(),
+                movementType: fullMovement.movementType,
+                currency: fullMovement.currency,
+                categoryID: fullMovement.category.id.toString(),
+                date: fullMovement.date.split('T')[0],
+                reference: fullMovement.reference || ''
+            });
+        }
+        
+        await loadCategories();
+        setIsEditModalOpen(true);
+    };
+
+    const handleEditFormChange = (field: string, value: string) => {
+        setEditFormData(prev => ({ ...prev, [field]: value }));
+    };
+
+    const handleEditSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        
+        if (!editingTransaction) return;
+        
+        try {
+            setIsSubmitting(true);
+            
+            const updateData = {
+                description: editFormData.description,
+                amount: parseFloat(editFormData.amount),
+                movementType: editFormData.movementType,
+                currency: editFormData.currency,
+                categoryID: parseInt(editFormData.categoryID),
+                date: new Date(editFormData.date).toISOString(),
+                reference: editFormData.reference || undefined
+            };
+            
+            console.log('📝 Datos a enviar:', updateData);
+            
+            await movementService.updateMovement(parseInt(editingTransaction.id), updateData);
+            
+            // Cerrar modal y recargar transacciones
+            setIsEditModalOpen(false);
+            setEditingTransaction(null);
+            await loadTransactions();
+            
+        } catch (err) {
+            console.error('Error al actualizar transacción:', err);
+            alert('Error al actualizar la transacción');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleCloseEditModal = () => {
+        setIsEditModalOpen(false);
+        setEditingTransaction(null);
+    };
+
+    const handleApplyFilters = () => {
+        setFilters(prev => ({
+            ...prev,
+            startDate: startDate || undefined,
+            endDate: endDate || undefined,
+            categoryId: selectedCategory ? parseInt(selectedCategory) : undefined,
+            type: (selectedType as 'INGRESO' | 'EGRESO') || undefined,
+            page: 0 // Reset to first page when applying filters
+        }));
+    };
+
+    const handleClearFilters = () => {
+        setStartDate('');
+        setEndDate('');
+        setSelectedCategory('');
+        setSelectedType('');
+        setFilters({
+            page: 0,
+            size: 20
+        });
     };
 
     // Calcular estadísticas
@@ -106,41 +235,96 @@ const TransactionsSection = () => {
 
             {/* Barra de herramientas */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                    <div className="flex flex-col sm:flex-row gap-3 flex-1">
-                        {/* Buscador */}
-                        <div className="relative flex-1 max-w-md">
-                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                            <input
-                                type="text"
-                                placeholder="Buscar transacciones..."
-                                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                            />
+                <div className="flex flex-col gap-4">
+                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                        <div className="flex flex-col sm:flex-row gap-3 flex-1">
+                            {/* Filtro por fecha */}
+                            <div className="flex gap-2">
+                                <input
+                                    type="date"
+                                    value={startDate}
+                                    onChange={(e) => setStartDate(e.target.value)}
+                                    placeholder="Fecha desde"
+                                    className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                                />
+                                <input
+                                    type="date"
+                                    value={endDate}
+                                    onChange={(e) => setEndDate(e.target.value)}
+                                    placeholder="Fecha hasta"
+                                    className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                                />
+                            </div>
                         </div>
 
-                        {/* Filtro por fecha */}
                         <div className="flex gap-2">
-                            <input
-                                type="date"
-                                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                            />
-                            <input
-                                type="date"
-                                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                            />
+                            <button
+                                onClick={handleApplyFilters}
+                                className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                            >
+                                Aplicar
+                            </button>
+                            <button
+                                onClick={handleClearFilters}
+                                className="flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                            >
+                                Limpiar
+                            </button>
+                            <button 
+                                onClick={() => setShowFilters(!showFilters)}
+                                className="flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                            >
+                                <Filter className="h-4 w-4 mr-2" />
+                                {showFilters ? 'Ocultar Filtros' : 'Más Filtros'}
+                            </button>
+                            <button className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                                <Download className="h-4 w-4 mr-2" />
+                                Exportar
+                            </button>
                         </div>
                     </div>
 
-                    <div className="flex gap-2">
-                        <button className="flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
-                            <Filter className="h-4 w-4 mr-2" />
-                            Filtros
-                        </button>
-                        <button className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
-                            <Download className="h-4 w-4 mr-2" />
-                            Exportar
-                        </button>
-                    </div>
+                    {/* Panel de filtros extendidos */}
+                    {showFilters && (
+                        <div className="pt-4 border-t border-gray-200">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {/* Filtro por categoría */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Categoría
+                                    </label>
+                                    <select
+                                        value={selectedCategory}
+                                        onChange={(e) => setSelectedCategory(e.target.value)}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                                    >
+                                        <option value="">Todas las categorías</option>
+                                        {categories.map((cat) => (
+                                            <option key={cat.id} value={cat.id}>
+                                                {cat.emoji} {cat.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                {/* Filtro por tipo */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Tipo
+                                    </label>
+                                    <select
+                                        value={selectedType}
+                                        onChange={(e) => setSelectedType(e.target.value)}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                                    >
+                                        <option value="">Todos los tipos</option>
+                                        <option value="INGRESO">Ingresos</option>
+                                        <option value="EGRESO">Egresos</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -283,7 +467,10 @@ const TransactionsSection = () => {
                                                     <button className="text-blue-600 hover:text-blue-900 p-1 hover:bg-blue-50 rounded">
                                                         <Eye className="h-4 w-4" />
                                                     </button>
-                                                    <button className="text-green-600 hover:text-green-900 p-1 hover:bg-green-50 rounded">
+                                                    <button 
+                                                        onClick={() => handleEditClick(transaction)}
+                                                        className="text-green-600 hover:text-green-900 p-1 hover:bg-green-50 rounded"
+                                                    >
                                                         <Edit className="h-4 w-4" />
                                                     </button>
                                                 </div>
@@ -316,6 +503,151 @@ const TransactionsSection = () => {
                     </>
                 )}
             </div>
+
+            {/* Edit Modal */}
+            {isEditModalOpen && editingTransaction && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+                        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+                            <h3 className="text-lg font-semibold text-gray-900">Editar Transacción</h3>
+                            <button
+                                onClick={handleCloseEditModal}
+                                className="text-gray-400 hover:text-gray-600 transition-colors"
+                            >
+                                <X className="h-5 w-5" />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleEditSubmit} className="p-6 space-y-4">
+                            {/* Descripción */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Descripción
+                                </label>
+                                <input
+                                    type="text"
+                                    value={editFormData.description}
+                                    onChange={(e) => handleEditFormChange('description', e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                                    required
+                                />
+                            </div>
+
+                            {/* Monto */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Monto
+                                </label>
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    value={editFormData.amount}
+                                    onChange={(e) => handleEditFormChange('amount', e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                                    required
+                                />
+                            </div>
+
+                            {/* Tipo */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Tipo
+                                </label>
+                                <select
+                                    value={editFormData.movementType}
+                                    onChange={(e) => handleEditFormChange('movementType', e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                                >
+                                    <option value="INGRESO">Ingreso</option>
+                                    <option value="EGRESO">Egreso</option>
+                                </select>
+                            </div>
+
+                            {/* Moneda */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Moneda
+                                </label>
+                                <select
+                                    value={editFormData.currency}
+                                    onChange={(e) => handleEditFormChange('currency', e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                                >
+                                    <option value="ARS">ARS</option>
+                                    <option value="USD">USD</option>
+                                </select>
+                            </div>
+
+                            {/* Categoría */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Categoría
+                                </label>
+                                <select
+                                    value={editFormData.categoryID}
+                                    onChange={(e) => handleEditFormChange('categoryID', e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                                    required
+                                >
+                                    <option value="">Seleccionar categoría</option>
+                                    {categories.map((cat) => (
+                                        <option key={cat.id} value={cat.id}>
+                                            {cat.emoji} {cat.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Fecha */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Fecha
+                                </label>
+                                <input
+                                    type="date"
+                                    value={editFormData.date}
+                                    onChange={(e) => handleEditFormChange('date', e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                                    required
+                                />
+                            </div>
+
+                            {/* Referencia */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Referencia (opcional)
+                                </label>
+                                <input
+                                    type="text"
+                                    value={editFormData.reference}
+                                    onChange={(e) => handleEditFormChange('reference', e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                                    placeholder="Ej: Cuenta bancaria, efectivo, etc."
+                                />
+                            </div>
+
+                            {/* Botones */}
+                            <div className="flex gap-3 pt-4">
+                                <button
+                                    type="button"
+                                    onClick={handleCloseEditModal}
+                                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                                    disabled={isSubmitting}
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                                    disabled={isSubmitting}
+                                >
+                                    {isSubmitting ? 'Guardando...' : 'Guardar Cambios'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

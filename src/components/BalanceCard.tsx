@@ -7,24 +7,41 @@ interface BalanceCardProps {
     type: 'total' | 'income' | 'expense';
     change?: number;
     showCurrencySwitch?: boolean;
+    arsAmount?: number; // Balance en ARS
+    usdAmount?: number; // Balance en USD
 }
 
-const BalanceCard = ({ title, amount, type, change, showCurrencySwitch = false }: BalanceCardProps) => {
+const BalanceCard = ({ title, amount, type, change, showCurrencySwitch = false, arsAmount, usdAmount }: BalanceCardProps) => {
     const [showInUSD, setShowInUSD] = useState(false);
     const DOLLAR_RATE = 1000; // Precio del dólar (puedes cambiarlo)
 
     const formatCurrency = (value: number, inUSD: boolean = false) => {
         if (inUSD) {
-            const usdValue = value / DOLLAR_RATE;
             return new Intl.NumberFormat('en-US', {
                 style: 'currency',
                 currency: 'USD'
-            }).format(usdValue);
+            }).format(value);
         }
         return new Intl.NumberFormat('es-AR', {
             style: 'currency',
             currency: 'ARS'
         }).format(value);
+    };
+
+    // Calcular el balance total según la moneda seleccionada
+    const getDisplayAmount = () => {
+        if (type === 'total' && showCurrencySwitch) {
+            if (showInUSD) {
+                // Mostrar en USD: USD + (ARS convertido a USD)
+                const arsInUsd = (arsAmount || 0) / DOLLAR_RATE;
+                return (usdAmount || 0) + arsInUsd;
+            } else {
+                // Mostrar en ARS: ARS + (USD convertido a ARS)
+                const usdInArs = (usdAmount || 0) * DOLLAR_RATE;
+                return (arsAmount || 0) + usdInArs;
+            }
+        }
+        return amount;
     };
 
     const getIcon = () => {
@@ -92,7 +109,7 @@ const BalanceCard = ({ title, amount, type, change, showCurrencySwitch = false }
                         )}
                     </div>
                     <p className={`text-3xl font-bold ${getColorClasses().split(' ')[0]} mb-2`}>
-                        {formatCurrency(amount, showInUSD && type === 'total')}
+                        {formatCurrency(getDisplayAmount(), showInUSD && type === 'total')}
                     </p>
                     {change && (
                         <div className="flex items-center space-x-1">
